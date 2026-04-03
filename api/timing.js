@@ -1,37 +1,46 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   
-  const { timing, duration, img1, img2, img3, img4, img5, img6, templateId, creatomateKey, audioUrl } = req.body;
+  const { duration, voiceover, images, img1, img2, img3, img4, img5, img6, templateId, creatomateKey, audioUrl } = req.body;
   
   const fallback = 'https://images.pexels.com/photos/159888/pexels-photo-159888.jpeg';
   const dur = parseFloat(duration) || 40;
+  const imageSubjects = (images || '').split('|').map(s => s.trim());
+  const words = (voiceover || '').toLowerCase().split(/\s+/);
+  const totalWords = words.length;
   
-  let values = [2,7,10,7,18,7,26,7,34,7,42,6];
-  if (timing && timing.includes('IMAGE_TIMES:')) {
-    values = timing.split('IMAGE_TIMES: ')[1].split('|').map(Number);
+  function findWordTime(subject) {
+    if (!subject || !voiceover) return null;
+    const subjectWords = subject.toLowerCase().split(/\s+/);
+    const firstWord = subjectWords[0];
+    for (let i = 0; i < words.length; i++) {
+      if (words[i].includes(firstWord) || firstWord.includes(words[i])) {
+        return Math.round((i / totalWords) * dur);
+      }
+    }
+    return null;
   }
   
+  const imgSources = [img1, img2, img3, img4, img5, img6];
+  const imageMods = {};
+  
+  let lastTime = 0;
+  for (let i = 0; i < 6; i++) {
+    const subject = imageSubjects[i] || '';
+    let time = findWordTime(subject);
+    if (time === null || time < lastTime) time = lastTime;
+    if (time > dur - 5) time = Math.max(0, dur - 5 - (5 - i) * 5);
+    const duration_val = i < 5 ? Math.min(8, Math.round(dur / 6)) : Math.max(3, dur - time - 1);
+    imageMods[`Image-${i+1}.source`] = imgSources[i] || fallback;
+    imageMods[`Image-${i+1}.time`] = time;
+    imageMods[`Image-${i+1}.duration`] = duration_val;
+    lastTime = time + 2;
+  }
+
   const modifications = {
     'Music.source': audioUrl,
     'Video-1.duration': Math.round(dur) + 2,
-    'Image-1.source': img1 || fallback,
-    'Image-1.time': values[0],
-    'Image-1.duration': values[1],
-    'Image-2.source': img2 || fallback,
-    'Image-2.time': values[2],
-    'Image-2.duration': values[3],
-    'Image-3.source': img3 || fallback,
-    'Image-3.time': values[4],
-    'Image-3.duration': values[5],
-    'Image-4.source': img4 || fallback,
-    'Image-4.time': values[6],
-    'Image-4.duration': values[7],
-    'Image-5.source': img5 || fallback,
-    'Image-5.time': values[8],
-    'Image-5.duration': values[9],
-    'Image-6.source': img6 || fallback,
-    'Image-6.time': values[10],
-    'Image-6.duration': values[11]
+    ...imageMods
   };
 
   const response = await fetch('https://api.creatomate.com/v1/renders', {
