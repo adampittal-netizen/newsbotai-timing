@@ -3,13 +3,17 @@ export default async function handler(req, res) {
   
   const { timing, duration, img1, img2, img3, img4, img5, img6, templateId, creatomateKey, audioUrl } = req.body;
   
-  const values = timing.split('IMAGE_TIMES: ')[1].split('|').map(Number);
-  
   const fallback = 'https://images.pexels.com/photos/159888/pexels-photo-159888.jpeg';
+  const dur = parseFloat(duration) || 40;
+  
+  let values = [2,7,10,7,18,7,26,7,34,7,42,6];
+  if (timing && timing.includes('IMAGE_TIMES:')) {
+    values = timing.split('IMAGE_TIMES: ')[1].split('|').map(Number);
+  }
   
   const modifications = {
     'Music.source': audioUrl,
-    'Video-1.duration': Math.round(duration) + 2,
+    'Video-1.duration': Math.round(dur) + 2,
     'Image-1.source': img1 || fallback,
     'Image-1.time': values[0],
     'Image-1.duration': values[1],
