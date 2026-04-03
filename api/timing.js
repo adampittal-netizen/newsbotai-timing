@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const imageSubjects = (images || '').split('|').map(s => s.trim());
   const imgSources = [img1, img2, img3, img4, img5, img6];
   
-  const times = (charTimes || '').split(',').map(Number);
+  const times = (charTimes || '').split('|').map(Number);
   const chars = charText || voiceover || '';
   
   function findSubjectTime(subject) {
